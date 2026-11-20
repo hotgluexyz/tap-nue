@@ -1,0 +1,24 @@
+send_anonymous_usage_stats: false
+project_id: tap-nue
+default_environment: test
+environments:
+- name: test
+plugins:
+  extractors:
+  - name: tap-nue
+    namespace: tap_nue
+    pip_url: -e .
+    capabilities: [state, catalog, discover, about]
+    settings:
+    - name: api_key
+      sensitive: true
+    - name: base_url
+      value: https://api.sandbox.nue.io
+    - name: start_date
+      kind: date_iso8601
+      value: '2000-01-01T00:00:00Z'
+    - name: page_size
+      kind: integer
+      value: 100
+    settings_group_validation:
+    - [api_key]
