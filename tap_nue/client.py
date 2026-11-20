@@ -45,12 +45,15 @@ class NueClient:
                     try:
                         delay = max(0, float(retry_after))
                     except ValueError:
-                        delay = max(
-                            0,
-                            (
-                                parsedate_to_datetime(retry_after) - datetime.now(timezone.utc)
-                            ).total_seconds(),
-                        )
+                        try:
+                            delay = max(
+                                0,
+                                (
+                                    parsedate_to_datetime(retry_after) - datetime.now(timezone.utc)
+                                ).total_seconds(),
+                            )
+                        except (TypeError, ValueError, OverflowError):
+                            pass
                 time.sleep(delay)
                 continue
             if not 200 <= response.status_code < 300:

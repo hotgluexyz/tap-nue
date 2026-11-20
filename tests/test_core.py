@@ -187,20 +187,27 @@ def test_failed_query_does_not_advance_bookmark(api, monkeypatch, payload):
     assert tap.state["bookmarks"]["customers"]["replication_key_value"] == "2026-02-01T00:00:00Z"
 
 
-def test_rate_limit_and_wrapped_empty_response(api, monkeypatch, capsys):
+@pytest.mark.parametrize(
+    ("retry_after", "status", "expected_wait"),
+    [("2", 429, 2), ("later", 503, 1.25), ("Thu, 01 Jan 1970 00:00:00 GMT", 429, 0)],
+)
+def test_rate_limit_and_wrapped_empty_response(
+    api, monkeypatch, capsys, retry_after, status, expected_wait
+):
     tap = TapNue(config=CONFIG)
     stream = tap.streams["customers"]
     responses = iter(
         [
-            response({}, 429, {"Retry-After": "2"}),
+            response({}, status, {"Retry-After": retry_after}),
             response({"status": "SUCCESS", "data": {"result": {"Customer": []}}}),
         ]
     )
     monkeypatch.setattr(requests.Session, "request", lambda *args, **kwargs: next(responses))
+    monkeypatch.setattr("tap_nue.client.random.random", lambda: 0.25)
     waits = []
     monkeypatch.setattr("tap_nue.client.time.sleep", waits.append)
     stream.sync()
-    assert waits == [2]
+    assert waits == [expected_wait]
     assert not [m for m in messages(capsys) if m["type"] == "RECORD"]
 
 
